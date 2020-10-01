@@ -1,8 +1,6 @@
 """
 Genome, genetic map and demographic model definitions for humans.
 """
-import collections
-
 import msprime
 
 import stdpopsim
@@ -32,20 +30,39 @@ _DosSantosEtAl = stdpopsim.Citation(
     reasons={stdpopsim.CiteReason.ASSEMBLY}
 )
 
-_genome_wide_estimate = 8.4e-9  # WRONG, underestimate used in S&S!
+_HoskinsEtAl = stdpopsim.Citation(
+    doi="https://doi.org/10.1101/gr.185579.114",
+    year="2015",
+    author="Hoskins et al.",
+    reasons={stdpopsim.CiteReason.ASSEMBLY}
+)
 
-_recombination_rate_data = collections.defaultdict(
-        lambda: _genome_wide_estimate)
-# Set some exceptions for non-recombining chrs.
-_recombination_rate_data["Y"] = 0
-_recombination_rate_data["mitochondrion_genome"] = 0
+_ComeronEtAl = stdpopsim.Citation(
+        author="Comeron et al",
+        doi="https://doi.org/10.1371/journal.pgen.1002905",
+        year=2012,
+)
+
+# Mean chromosomal rates, calculated from the Comeron 2012 map.
+# Chromosome 4 isn't in this map, so the weighted mean of 2L, 2R, 3L and 3R
+# was used instead.
+_recombination_rate_data = {
+    "2L": 2.4125016027908946e-08,
+    "2R": 2.2366522822806982e-08,
+    "3L": 1.7985794693631893e-08,
+    "3R": 1.7165556232922828e-08,
+    "4": 2.0085234464525437e-08,
+    "X": 2.9151053903465754e-08,
+    "Y": 0,
+    "mitochondrion_genome": 0,
+}
 
 _chromosomes = []
 for name, data in genome_data.data["chromosomes"].items():
     _chromosomes.append(stdpopsim.Chromosome(
         id=name, length=data["length"],
         synonyms=data["synonyms"],
-        mutation_rate=5.49e-9,  # citation: _SchriderEtAl
+        mutation_rate=5.49e-9,  # _SchriderEtAl de novo mutation rate
         recombination_rate=_recombination_rate_data[name]))
 
 
@@ -56,7 +73,12 @@ _genome = stdpopsim.Genome(
         mutation_rate_citations=[
             _SchriderEtAl.because(stdpopsim.CiteReason.MUT_RATE)],
         assembly_citations=[
-            _DosSantosEtAl])
+            _DosSantosEtAl,
+            _HoskinsEtAl
+            ],
+        recombination_rate_citations=[
+            _ComeronEtAl.because(stdpopsim.CiteReason.REC_RATE)]
+        )
 
 _species = stdpopsim.Species(
     id="DroMel",
@@ -96,11 +118,7 @@ _gm = stdpopsim.GeneticMap(
         "https://stdpopsim.s3-us-west-2.amazonaws.com/genetic_maps/"
         "DroMel/comeron2012_maps.tar.gz"),
     file_pattern="genetic_map_comeron2012_dm6_chr{id}.txt",
-    citations=[stdpopsim.Citation(
-        author="Comeron et al",
-        doi="https://doi.org/10.1371/journal.pgen.1002905",
-        year=2012,
-        reasons={stdpopsim.CiteReason.GEN_MAP})]
+    citations=[_ComeronEtAl.because(stdpopsim.CiteReason.GEN_MAP)]
     )
 
 _species.add_genetic_map(_gm)
